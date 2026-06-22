@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Arqueo Diario - La Esperanza</title>
+<link rel="icon" href="1.jpeg">
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
@@ -205,10 +206,9 @@ TOTAL A RECIBIR: C$ <span id="final">0</span>
 <table id="historial"></table>
 
 </div>
-
 <script>
 
-/* LOGIN */
+/* ================= LOGIN ================= */
 function login(){
 let u=document.getElementById("user").value.toLowerCase();
 let p=document.getElementById("pass").value.toLowerCase();
@@ -236,13 +236,14 @@ window.onload=()=>{
 if(localStorage.getItem("sesion")==="ok") mostrar();
 };
 
-/* INICIO */
+/* ================= INICIO ================= */
 function inicio(){
 
 document.getElementById("fecha").valueAsDate=new Date();
 
 setInterval(()=>{
-document.getElementById("hora").innerText=new Date().toLocaleTimeString();
+document.getElementById("hora").innerText=
+new Date().toLocaleTimeString();
 },1000);
 
 cargarHistorial();
@@ -250,93 +251,131 @@ calcular();
 
 document.addEventListener("input",()=>{
 calcular();
-guardarDatos();
 });
 }
 
-/* UTIL */
-function v(id){return Number(document.getElementById(id)?.value||0);}
-function s(id,val){document.getElementById(id).innerText=val;}
-
-/* CALCULO */
-function calcular(){
-
-let l=v("l")*400;
-let p=v("p")*700;
-let e=v("e")*550;
-let em=v("em")*50;
-
-s("tl",l);
-s("tp",p);
-s("te",e);
-s("tem",em);
-
-let total=l+p+e+em;
-
-s("total",total);
-s("final",total);
-
-s("ql",v("pl1")-v("pl2"));
-s("qp",v("pp1")-v("pp2"));
-s("qe",v("pe1")-v("pe2"));
-s("qx",v("px1")-v("px2"));
-s("qh",v("ph1")-v("ph2"));
+/* ================= UTIL ================= */
+function v(id){
+return Number(document.getElementById(id)?.value || 0);
 }
 
-/* PAGOS */
+function s(id,val){
+document.getElementById(id).innerText=val;
+}
+
+/* ================= CALCULO + PAPELERIA ================= */
+function calcular(){
+
+const l = v("l");
+const p = v("p");
+const e = v("e");
+const em = v("em");
+
+/* INGRESOS */
+let tl = l * 400;
+let tp = p * 700;
+let te = e * 550;
+let tem = em * 50;
+
+s("tl", tl);
+s("tp", tp);
+s("te", te);
+s("tem", tem);
+
+let total = tl + tp + te + tem;
+s("total", total);
+s("final", total);
+
+/* ================= PAPELERIA BASE FIJA ================= */
+
+/* LIVIANOS */
+const livIni = 3066500;
+const livUsados = 3066423 + l;
+const livQuedan = livIni - livUsados;
+
+document.getElementById("pl1").value = livIni;
+document.getElementById("pl2").value = livUsados;
+s("ql", livQuedan);
+
+/* PESADOS */
+const pesIni = 830250;
+const pesUsados = 830230 + p;
+const pesQuedan = pesIni - pesUsados;
+
+document.getElementById("pp1").value = pesIni;
+document.getElementById("pp2").value = pesUsados;
+s("qp", pesQuedan);
+
+/* EMISIONES */
+const emiIni = 0;
+const emiUsados = e;
+const emiQuedan = emiIni - emiUsados;
+
+document.getElementById("pe1").value = emiIni;
+document.getElementById("pe2").value = emiUsados;
+s("qe", emiQuedan);
+
+/* EMPLASTICADOS */
+const empIni = 39;
+const empUsados = em;
+const empQuedan = empIni - empUsados;
+
+document.getElementById("px1").value = empIni;
+document.getElementById("px2").value = empUsados;
+s("qx", empQuedan);
+
+}
+
+/* ================= PAGOS ================= */
 function addPago(){
 document.getElementById("pagos").innerHTML+=`
 <tr>
 <td><input></td>
 <td><input type="number"></td>
-<td><button class="deleteBtn" onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
 </tr>`;
 }
 
-/* GASTOS */
+/* ================= GASTOS ================= */
 function addGasto(){
 document.getElementById("gastos").innerHTML+=`
 <tr>
 <td><input></td>
 <td><input type="number"></td>
-<td><button class="deleteBtn" onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
 </tr>`;
 }
 
-/* GUARDAR */
+/* ================= GUARDAR HISTORIAL ================= */
 function guardar(){
 
-let h=JSON.parse(localStorage.getItem("historial")||"[]");
+let h = JSON.parse(localStorage.getItem("historial") || "[]");
 
 h.push({
-fecha:document.getElementById("fecha").value,
-hora:new Date().toLocaleTimeString(),
-
-l:v("l"),
-p:v("p"),
-e:v("e"),
-em:v("em"),
-
-total:v("l")*400+v("p")*700+v("e")*550+v("em")*50
+fecha: document.getElementById("fecha").value,
+hora: new Date().toLocaleTimeString(),
+l: v("l"),
+p: v("p"),
+e: v("e"),
+em: v("em"),
+total: (v("l")*400)+(v("p")*700)+(v("e")*550)+(v("em")*50)
 });
 
-localStorage.setItem("historial",JSON.stringify(h));
+localStorage.setItem("historial", JSON.stringify(h));
 cargarHistorial();
 }
 
-/* HISTORIAL */
+/* ================= HISTORIAL ================= */
 function cargarHistorial(){
-render(JSON.parse(localStorage.getItem("historial")||"[]"));
+render(JSON.parse(localStorage.getItem("historial") || "[]"));
 }
 
-/* FILTRO */
 function filtrar(){
 let f=document.getElementById("filtro").value;
-let h=JSON.parse(localStorage.getItem("historial")||"[]");
+let h=JSON.parse(localStorage.getItem("historial") || "[]");
 render(h.filter(x=>x.fecha===f));
 }
 
-/* RENDER */
 function render(data){
 
 let t=document.getElementById("historial");
@@ -366,13 +405,13 @@ t.innerHTML+=`
 });
 }
 
-/* BORRAR */
+/* ================= BORRAR ================= */
 function clearHistory(){
 localStorage.removeItem("historial");
 cargarHistorial();
 }
 
-/* DESCARGA */
+/* ================= DESCARGAR ================= */
 function descargar(){
 html2canvas(document.getElementById("sistema")).then(canvas=>{
 let a=document.createElement("a");
@@ -383,6 +422,5 @@ a.click();
 }
 
 </script>
-
 </body>
 </html>
