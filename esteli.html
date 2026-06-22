@@ -95,7 +95,15 @@ border-radius:6px;
 background:#0984e3;
 color:white;
 }
+#sistema{
+    background:#fff;
+}
 
+@media print{
+    button{
+        display:none;
+    }
+}
 button:hover{opacity:.8;}
 
 .deleteBtn{background:#d63031;}
@@ -132,7 +140,9 @@ border-radius:8px;
 <p id="msg"></p>
 </div>
 </div>
-
+<div id="reporte" style="display:none">
+   <!-- formato igual al Excel -->
+</div>
 <!-- SISTEMA -->
 <div class="container" id="sistema">
 
@@ -206,7 +216,95 @@ TOTAL A RECIBIR: C$ <span id="final">0</span>
 <table id="historial"></table>
 
 </div>
-<script>
+<script>/* ================= ALERTAS BONITAS (PRO) ================= */
+
+const toastZone=document.createElement("div");
+
+toastZone.style.position="fixed";
+toastZone.style.top="20px";
+toastZone.style.right="20px";
+toastZone.style.display="flex";
+toastZone.style.flexDirection="column";
+toastZone.style.gap="10px";
+toastZone.style.zIndex="999999";
+
+document.body.appendChild(toastZone);
+
+function alerta(msg, tipo="info"){
+
+const types={
+ok:{color:"#16a34a",icon:"✔",title:"Éxito"},
+error:{color:"#dc2626",icon:"✖",title:"Error"},
+info:{color:"#2563eb",icon:"ℹ",title:"Info"}
+};
+
+let t=types[tipo]||types.info;
+
+let box=document.createElement("div");
+
+box.style.width="300px";
+box.style.padding="12px 14px";
+box.style.borderRadius="12px";
+box.style.color="white";
+box.style.fontFamily="Segoe UI, Arial";
+box.style.boxShadow="0 10px 25px rgba(0,0,0,0.25)";
+box.style.background=t.color;
+box.style.position="relative";
+box.style.overflow="hidden";
+box.style.opacity="0";
+box.style.transform="translateX(40px)";
+box.style.transition="0.25s ease";
+
+box.innerHTML=`
+<div style="display:flex;align-items:center;gap:10px;">
+<div style="font-size:18px;">${t.icon}</div>
+<div>
+<div style="font-size:13px;font-weight:600;">${t.title}</div>
+<div style="font-size:12px;opacity:0.9;margin-top:2px;">${msg}</div>
+</div>
+</div>
+`;
+
+/* barra progreso */
+let bar=document.createElement("div");
+bar.style.position="absolute";
+bar.style.bottom="0";
+bar.style.left="0";
+bar.style.height="3px";
+bar.style.width="100%";
+bar.style.background="rgba(255,255,255,0.35)";
+bar.style.transformOrigin="left";
+bar.style.animation="toastProgress 3s linear forwards";
+
+box.appendChild(bar);
+
+toastZone.appendChild(box);
+
+setTimeout(()=>{
+box.style.opacity="1";
+box.style.transform="translateX(0)";
+},30);
+
+setTimeout(()=>{
+box.style.opacity="0";
+box.style.transform="translateX(40px)";
+setTimeout(()=>box.remove(),300);
+},3000);
+
+/* CSS UNA SOLA VEZ */
+if(!document.getElementById("toastStyle")){
+let style=document.createElement("style");
+style.id="toastStyle";
+style.innerHTML=`
+@keyframes toastProgress{
+from{transform:scaleX(1);}
+to{transform:scaleX(0);}
+}`;
+document.head.appendChild(style);
+}
+
+}
+
 
 /* ================= LOGIN ================= */
 function login(){
@@ -215,15 +313,18 @@ let p=document.getElementById("pass").value.toLowerCase();
 
 if(u==="la esperanza" && p==="laesperanza2026"){
 localStorage.setItem("sesion","ok");
+alerta("Acceso autorizado al sistema", "ok");
 mostrar();
 }else{
+alerta("Credenciales incorrectas", "error");
 document.getElementById("msg").innerText="Error de acceso";
 }
 }
 
 function logout(){
 localStorage.removeItem("sesion");
-location.reload();
+alerta("Sesión cerrada", "info");
+setTimeout(()=>location.reload(),800);
 }
 
 function mostrar(){
@@ -236,7 +337,10 @@ window.onload=()=>{
 if(localStorage.getItem("sesion")==="ok") mostrar();
 };
 
+
 /* ================= INICIO ================= */
+let listenerAdded=false;
+
 function inicio(){
 
 document.getElementById("fecha").valueAsDate=new Date();
@@ -249,10 +353,13 @@ new Date().toLocaleTimeString();
 cargarHistorial();
 calcular();
 
-document.addEventListener("input",()=>{
-calcular();
-});
+if(!listenerAdded){
+document.addEventListener("input",calcular);
+listenerAdded=true;
 }
+
+}
+
 
 /* ================= UTIL ================= */
 function v(id){
@@ -263,116 +370,139 @@ function s(id,val){
 document.getElementById(id).innerText=val;
 }
 
-/* ================= CALCULO + PAPELERIA ================= */
+
+/* ================= GASTOS ================= */
+function totalGastos(){
+let inputs=document.querySelectorAll("#gastos input[type='number']");
+let suma=0;
+
+inputs.forEach(i=>{
+suma+=Number(i.value||0);
+});
+
+return suma;
+}
+
+
+/* ================= CALCULO ================= */
 function calcular(){
 
-const l = v("l");
-const p = v("p");
-const e = v("e");
-const em = v("em");
+const l=v("l");
+const p=v("p");
+const e=v("e");
+const em=v("em");
 
-/* INGRESOS */
-let tl = l * 400;
-let tp = p * 700;
-let te = e * 550;
-let tem = em * 50;
+let tl=l*400;
+let tp=p*700;
+let te=e*550;
+let tem=em*50;
 
-s("tl", tl);
-s("tp", tp);
-s("te", te);
-s("tem", tem);
+s("tl",tl);
+s("tp",tp);
+s("te",te);
+s("tem",tem);
 
-let total = tl + tp + te + tem;
-s("total", total);
-s("final", total);
+let total=tl+tp+te+tem;
+let gastos=totalGastos();
+let final=total-gastos;
 
-/* ================= PAPELERIA BASE FIJA ================= */
+s("total",total);
+s("final",final);
 
-/* LIVIANOS */
-const livIni = 3066500;
-const livUsados = 3066423 + l;
-const livQuedan = livIni - livUsados;
 
-document.getElementById("pl1").value = livIni;
-document.getElementById("pl2").value = livUsados;
-s("ql", livQuedan);
+/* PAPELERIA */
 
-/* PESADOS */
-const pesIni = 830250;
-const pesUsados = 830230 + p;
-const pesQuedan = pesIni - pesUsados;
+const livIni=3104250;
+const livUsados=3104234+l;
+const livQuedan=livIni-livUsados;
 
-document.getElementById("pp1").value = pesIni;
-document.getElementById("pp2").value = pesUsados;
-s("qp", pesQuedan);
+document.getElementById("pl1").value=livIni;
+document.getElementById("pl2").value=livUsados;
+s("ql",livQuedan);
 
-/* EMISIONES */
-const emiIni = 0;
-const emiUsados = e;
-const emiQuedan = emiIni - emiUsados;
+const pesIni=823250;
+const pesUsados=823210+p;
+const pesQuedan=pesIni-pesUsados;
 
-document.getElementById("pe1").value = emiIni;
-document.getElementById("pe2").value = emiUsados;
-s("qe", emiQuedan);
+document.getElementById("pp1").value=pesIni;
+document.getElementById("pp2").value=pesUsados;
+s("qp",pesQuedan);
 
-/* EMPLASTICADOS */
-const empIni = 39;
-const empUsados = em;
-const empQuedan = empIni - empUsados;
+const emiIni=123952;
+const emiUsados=123926+e;
+const emiQuedan=emiIni-emiUsados;
 
-document.getElementById("px1").value = empIni;
-document.getElementById("px2").value = empUsados;
-s("qx", empQuedan);
+document.getElementById("pe1").value=String(emiIni).padStart(7,"0");
+document.getElementById("pe2").value=String(emiUsados).padStart(7,"0");
+s("qe",emiQuedan);
+
+const empIni=39;
+const empUsados=em;
+const empQuedan=empIni-empUsados;
+
+document.getElementById("px1").value=empIni;
+document.getElementById("px2").value=empUsados;
+s("qx",empQuedan);
 
 }
+
 
 /* ================= PAGOS ================= */
 function addPago(){
 document.getElementById("pagos").innerHTML+=`
 <tr>
 <td><input></td>
-<td><input type="number"></td>
-<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><input type="number" oninput="calcular()"></td>
+<td><button onclick="this.parentElement.parentElement.remove();calcular()">X</button></td>
 </tr>`;
 }
+
 
 /* ================= GASTOS ================= */
 function addGasto(){
 document.getElementById("gastos").innerHTML+=`
 <tr>
 <td><input></td>
-<td><input type="number"></td>
-<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><input type="number" oninput="calcular()"></td>
+<td><button onclick="this.parentElement.parentElement.remove();calcular()">X</button></td>
 </tr>`;
 }
 
-/* ================= GUARDAR HISTORIAL ================= */
+
+/* ================= GUARDAR ================= */
 function guardar(){
 
-let h = JSON.parse(localStorage.getItem("historial") || "[]");
+let h=JSON.parse(localStorage.getItem("historial")||"[]");
+
+let ingresos=(v("l")*400)+(v("p")*700)+(v("e")*550)+(v("em")*50);
 
 h.push({
-fecha: document.getElementById("fecha").value,
-hora: new Date().toLocaleTimeString(),
-l: v("l"),
-p: v("p"),
-e: v("e"),
-em: v("em"),
-total: (v("l")*400)+(v("p")*700)+(v("e")*550)+(v("em")*50)
+fecha:document.getElementById("fecha").value,
+hora:new Date().toLocaleTimeString(),
+l:v("l"),
+p:v("p"),
+e:v("e"),
+em:v("em"),
+total:ingresos,
+gastos:totalGastos(),
+final:ingresos-totalGastos()
 });
 
-localStorage.setItem("historial", JSON.stringify(h));
+localStorage.setItem("historial",JSON.stringify(h));
 cargarHistorial();
+
+alerta("Registro guardado en el sistema", "ok");
 }
+
 
 /* ================= HISTORIAL ================= */
 function cargarHistorial(){
-render(JSON.parse(localStorage.getItem("historial") || "[]"));
+render(JSON.parse(localStorage.getItem("historial")||"[]"));
 }
 
 function filtrar(){
 let f=document.getElementById("filtro").value;
-let h=JSON.parse(localStorage.getItem("historial") || "[]");
+let h=JSON.parse(localStorage.getItem("historial")||"[]");
 render(h.filter(x=>x.fecha===f));
 }
 
@@ -400,26 +530,49 @@ t.innerHTML+=`
 <td>${x.p}</td>
 <td>${x.e}</td>
 <td>${x.em}</td>
-<td>${x.total}</td>
+<td>${x.final ?? x.total}</td>
 </tr>`;
 });
 }
+
 
 /* ================= BORRAR ================= */
 function clearHistory(){
 localStorage.removeItem("historial");
 cargarHistorial();
+alerta("Historial eliminado del sistema", "error");
 }
+
 
 /* ================= DESCARGAR ================= */
 function descargar(){
-html2canvas(document.getElementById("sistema")).then(canvas=>{
-let a=document.createElement("a");
-a.download="arqueo.png";
-a.href=canvas.toDataURL();
+
+alerta("Generando reporte visual...", "info");
+
+const botones=document.querySelectorAll("button");
+
+botones.forEach(b=>b.style.display="none");
+
+html2canvas(document.getElementById("sistema"),{
+scale:3,
+useCORS:true,
+backgroundColor:"#ffffff"
+}).then(canvas=>{
+
+botones.forEach(b=>b.style.display="");
+
+const a=document.createElement("a");
+
+a.download=`REPORTE_${document.getElementById("fecha").value}.png`;
+a.href=canvas.toDataURL("image/png",1.0);
 a.click();
+
+alerta("Reporte generado correctamente", "ok");
+
 });
+
 }
+
 
 </script>
 </body>

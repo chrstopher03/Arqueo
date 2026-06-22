@@ -6,6 +6,7 @@
 <link rel="icon" href="1.jpeg">
 
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
 
 <style>
 
@@ -116,7 +117,11 @@ background:#00b894;
 color:white;
 border-radius:8px;
 }
-
+.sheet{
+    display:grid;
+    grid-template-columns: 70% 30%;
+    gap:20px;
+}
 </style>
 </head>
 
@@ -132,7 +137,9 @@ border-radius:8px;
 <p id="msg"></p>
 </div>
 </div>
-
+<div id="reporte" style="display:none">
+   <!-- formato igual al Excel -->
+</div>
 <!-- SISTEMA -->
 <div class="container" id="sistema">
 
@@ -195,6 +202,7 @@ TOTAL A RECIBIR: C$ <span id="final">0</span>
 
 <button onclick="guardar()">💾 Guardar</button>
 <button onclick="descargar()">📸 Imagen</button>
+<button onclick="exportarExcel()">📊 Excel</button>
 <button onclick="clearHistory()">🗑 Borrar historial</button>
 
 <h3>FILTRO HISTORIAL</h3>
@@ -206,7 +214,56 @@ TOTAL A RECIBIR: C$ <span id="final">0</span>
 <table id="historial"></table>
 
 </div>
-<script>
+<script>/* ================= ALERTAS PROFESIONALES ================= */
+function alerta(msg, tipo="info"){
+
+const colores={
+ok:"#2ecc71",
+error:"#e74c3c",
+info:"#3498db"
+};
+
+const iconos={
+ok:"✔",
+error:"✖",
+info:"ℹ"
+};
+
+let box=document.createElement("div");
+
+box.innerHTML=`<strong>${iconos[tipo]||"ℹ"}</strong> ${msg}`;
+
+box.style.position="fixed";
+box.style.top="20px";
+box.style.right="20px";
+box.style.padding="14px 18px";
+box.style.borderRadius="12px";
+box.style.color="white";
+box.style.fontSize="14px";
+box.style.fontFamily="Arial";
+box.style.zIndex="99999";
+box.style.boxShadow="0 12px 30px rgba(0,0,0,0.25)";
+box.style.background=colores[tipo]||colores.info;
+box.style.transition="all 0.4s ease";
+box.style.opacity="0";
+box.style.transform="translateY(-15px)";
+box.style.minWidth="200px";
+
+document.body.appendChild(box);
+
+setTimeout(()=>{
+box.style.opacity="1";
+box.style.transform="translateY(0)";
+},50);
+
+setTimeout(()=>{
+box.style.opacity="0";
+box.style.transform="translateY(-15px)";
+setTimeout(()=>box.remove(),400);
+},2500);
+
+}
+
 
 /* ================= LOGIN ================= */
 function login(){
@@ -215,15 +272,18 @@ let p=document.getElementById("pass").value.toLowerCase();
 
 if(u==="laesperanza" && p==="somoto2026"){
 localStorage.setItem("sesion","ok");
+alerta("Bienvenido al sistema", "ok");
 mostrar();
 }else{
+alerta("Usuario o contraseña incorrectos", "error");
 document.getElementById("msg").innerText="Error de acceso";
 }
 }
 
 function logout(){
 localStorage.removeItem("sesion");
-location.reload();
+alerta("Sesión cerrada", "info");
+setTimeout(()=>location.reload(),700);
 }
 
 function mostrar(){
@@ -236,7 +296,10 @@ window.onload=()=>{
 if(localStorage.getItem("sesion")==="ok") mostrar();
 };
 
+
 /* ================= INICIO ================= */
+let listenerAdded=false;
+
 function inicio(){
 
 document.getElementById("fecha").valueAsDate=new Date();
@@ -249,10 +312,13 @@ new Date().toLocaleTimeString();
 cargarHistorial();
 calcular();
 
-document.addEventListener("input",()=>{
-calcular();
-});
+if(!listenerAdded){
+document.addEventListener("input",calcular);
+listenerAdded=true;
 }
+
+}
+
 
 /* ================= UTIL ================= */
 function v(id){
@@ -263,116 +329,144 @@ function s(id,val){
 document.getElementById(id).innerText=val;
 }
 
-/* ================= CALCULO + PAPELERIA ================= */
+
+/* ================= GASTOS ================= */
+function totalGastos(){
+let inputs=document.querySelectorAll("#gastos input[type='number']");
+let suma=0;
+
+inputs.forEach(i=>{
+suma+=Number(i.value||0);
+});
+
+return suma;
+}
+
+
+/* ================= CALCULO PRINCIPAL ================= */
 function calcular(){
 
-const l = v("l");
-const p = v("p");
-const e = v("e");
-const em = v("em");
+const l=v("l");
+const p=v("p");
+const e=v("e");
+const em=v("em");
 
 /* INGRESOS */
-let tl = l * 400;
-let tp = p * 700;
-let te = e * 550;
-let tem = em * 50;
+let tl=l*400;
+let tp=p*700;
+let te=e*550;
+let tem=em*50;
 
-s("tl", tl);
-s("tp", tp);
-s("te", te);
-s("tem", tem);
+s("tl",tl);
+s("tp",tp);
+s("te",te);
+s("tem",tem);
 
-let total = tl + tp + te + tem;
-s("total", total);
-s("final", total);
+let total=tl+tp+te+tem;
+let gastos=totalGastos();
+let final=total-gastos;
 
-/* ================= PAPELERIA BASE FIJA ================= */
+s("total",total);
+s("final",final);
+
+
+/* ================= PAPELERIA ================= */
 
 /* LIVIANOS */
-const livIni = 3066500;
-const livUsados = 3066423 + l;
-const livQuedan = livIni - livUsados;
+const livIni=3066500;
+const livUsados=3066423+l;
+const livQuedan=livIni-livUsados;
 
-document.getElementById("pl1").value = livIni;
-document.getElementById("pl2").value = livUsados;
-s("ql", livQuedan);
+document.getElementById("pl1").value=livIni;
+document.getElementById("pl2").value=livUsados;
+s("ql",livQuedan);
 
 /* PESADOS */
-const pesIni = 830250;
-const pesUsados = 830230 + p;
-const pesQuedan = pesIni - pesUsados;
+const pesIni=830250;
+const pesUsados=830230+p;
+const pesQuedan=pesIni-pesUsados;
 
-document.getElementById("pp1").value = pesIni;
-document.getElementById("pp2").value = pesUsados;
-s("qp", pesQuedan);
+document.getElementById("pp1").value=pesIni;
+document.getElementById("pp2").value=pesUsados;
+s("qp",pesQuedan);
 
 /* EMISIONES */
-const emiIni = 0;
-const emiUsados = e;
-const emiQuedan = emiIni - emiUsados;
+const emiIni=0;
+const emiUsados=e;
+const emiQuedan=emiIni-emiUsados;
 
-document.getElementById("pe1").value = emiIni;
-document.getElementById("pe2").value = emiUsados;
-s("qe", emiQuedan);
+document.getElementById("pe1").value=emiIni;
+document.getElementById("pe2").value=emiUsados;
+s("qe",emiQuedan);
 
 /* EMPLASTICADOS */
-const empIni = 39;
-const empUsados = em;
-const empQuedan = empIni - empUsados;
+const empIni=39;
+const empUsados= 1 + em;
+const empQuedan=empIni-empUsados;
 
-document.getElementById("px1").value = empIni;
-document.getElementById("px2").value = empUsados;
-s("qx", empQuedan);
+document.getElementById("px1").value=empIni;
+document.getElementById("px2").value=empUsados;
+s("qx",empQuedan);
 
 }
+
 
 /* ================= PAGOS ================= */
 function addPago(){
 document.getElementById("pagos").innerHTML+=`
 <tr>
 <td><input></td>
-<td><input type="number"></td>
-<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><input type="number" oninput="calcular()"></td>
+<td><button onclick="this.parentElement.parentElement.remove();calcular()">X</button></td>
 </tr>`;
 }
+
 
 /* ================= GASTOS ================= */
 function addGasto(){
 document.getElementById("gastos").innerHTML+=`
 <tr>
 <td><input></td>
-<td><input type="number"></td>
-<td><button onclick="this.parentElement.parentElement.remove()">X</button></td>
+<td><input type="number" oninput="calcular()"></td>
+<td><button onclick="this.parentElement.parentElement.remove();calcular()">X</button></td>
 </tr>`;
 }
 
-/* ================= GUARDAR HISTORIAL ================= */
+
+/* ================= GUARDAR ================= */
 function guardar(){
 
-let h = JSON.parse(localStorage.getItem("historial") || "[]");
+let h=JSON.parse(localStorage.getItem("historial")||"[]");
+
+let ingresos=(v("l")*400)+(v("p")*700)+(v("e")*550)+(v("em")*50);
 
 h.push({
-fecha: document.getElementById("fecha").value,
-hora: new Date().toLocaleTimeString(),
-l: v("l"),
-p: v("p"),
-e: v("e"),
-em: v("em"),
-total: (v("l")*400)+(v("p")*700)+(v("e")*550)+(v("em")*50)
+fecha:document.getElementById("fecha").value,
+hora:new Date().toLocaleTimeString(),
+l:v("l"),
+p:v("p"),
+e:v("e"),
+em:v("em"),
+total:ingresos,
+gastos:totalGastos(),
+final:ingresos-totalGastos()
 });
 
-localStorage.setItem("historial", JSON.stringify(h));
+localStorage.setItem("historial",JSON.stringify(h));
 cargarHistorial();
+
+alerta("Registro guardado correctamente", "ok");
 }
+
 
 /* ================= HISTORIAL ================= */
 function cargarHistorial(){
-render(JSON.parse(localStorage.getItem("historial") || "[]"));
+render(JSON.parse(localStorage.getItem("historial")||"[]"));
 }
 
 function filtrar(){
 let f=document.getElementById("filtro").value;
-let h=JSON.parse(localStorage.getItem("historial") || "[]");
+let h=JSON.parse(localStorage.getItem("historial")||"[]");
 render(h.filter(x=>x.fecha===f));
 }
 
@@ -400,26 +494,191 @@ t.innerHTML+=`
 <td>${x.p}</td>
 <td>${x.e}</td>
 <td>${x.em}</td>
-<td>${x.total}</td>
+<td>${x.final ?? x.total}</td>
 </tr>`;
 });
 }
+
 
 /* ================= BORRAR ================= */
 function clearHistory(){
 localStorage.removeItem("historial");
 cargarHistorial();
+alerta("Historial eliminado", "error");
 }
+
 
 /* ================= DESCARGAR ================= */
 function descargar(){
-html2canvas(document.getElementById("sistema")).then(canvas=>{
-let a=document.createElement("a");
-a.download="arqueo.png";
-a.href=canvas.toDataURL();
+
+alerta("Generando reporte...", "info");
+
+const botones=document.querySelectorAll("button");
+
+botones.forEach(b=>b.style.display="none");
+
+html2canvas(document.getElementById("sistema"),{
+scale:3,
+useCORS:true,
+backgroundColor:"#ffffff"
+}).then(canvas=>{
+
+botones.forEach(b=>b.style.display="");
+
+const a=document.createElement("a");
+
+a.download=`ARQUEO_${document.getElementById("fecha").value}.png`;
+a.href=canvas.toDataURL("image/png",1.0);
 a.click();
+
+alerta("Reporte descargado correctamente", "ok");
+
 });
+
 }
+
+
+async function exportarExcel(){
+
+alerta("Generando Excel profesional estilo empresa...", "info");
+
+const wb = new ExcelJS.Workbook();
+const ws = wb.addWorksheet("REPORTE CONTABLE");
+
+/* ================= ANCHO COLUMNAS ================= */
+ws.columns = [
+{ width: 14 },
+{ width: 14 },
+{ width: 8 },
+{ width: 8 },
+{ width: 8 },
+{ width: 10 },
+{ width: 14 },
+{ width: 14 },
+{ width: 14 }
+];
+
+/* ================= ENCABEZADO ================= */
+ws.mergeCells("A1:I1");
+ws.getCell("A1").value = "TALLER LA ESPERANZA - SOMOTO";
+ws.getCell("A1").alignment = { horizontal: "center" };
+ws.getCell("A1").font = { bold: true, size: 16, color: { argb: "FFFFFF" } };
+ws.getCell("A1").fill = {
+type: "pattern",
+pattern: "solid",
+fgColor: { argb: "1F4E79" }
+};
+
+ws.mergeCells("A2:I2");
+ws.getCell("A2").value = "REPORTE CONTABLE DIARIO";
+ws.getCell("A2").alignment = { horizontal: "center" };
+ws.getCell("A2").font = { bold: true, size: 14, color: { argb: "FFFFFF" } };
+ws.getCell("A2").fill = {
+type: "pattern",
+pattern: "solid",
+fgColor: { argb: "2E86C1" }
+};
+
+/* FECHA */
+ws.mergeCells("A3:I3");
+ws.getCell("A3").value = "Fecha: " + fecha.value;
+ws.getCell("A3").alignment = { horizontal: "center" };
+
+/* ================= TABLA VENTAS ================= */
+ws.addRow([]);
+ws.addRow(["VENTAS DEL DÍA"]);
+
+let header = ws.addRow([
+"FECHA","HORA","LIV","PES","EMI","EMPL","INGRESOS","GASTOS","NETO"
+]);
+
+header.eachCell(cell=>{
+cell.font = { bold: true, color: { argb: "FFFFFF" } };
+cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"4472C4" } };
+cell.alignment = { horizontal:"center" };
+cell.border = {
+top:{style:"thin"}, left:{style:"thin"},
+bottom:{style:"thin"}, right:{style:"thin"}
+};
+});
+
+JSON.parse(localStorage.getItem("historial")||"[]").forEach(x=>{
+ws.addRow([
+x.fecha,
+x.hora,
+x.l,
+x.p,
+x.e,
+x.em,
+x.total,
+x.gastos||0,
+x.final
+]);
+});
+
+/* ================= RESUMEN ================= */
+ws.addRow([]);
+ws.addRow(["RESUMEN FINANCIERO"]);
+
+let totalIng = JSON.parse(localStorage.getItem("historial")||"[]")
+.reduce((a,b)=>a+(b.total||0),0);
+
+let totalGas = JSON.parse(localStorage.getItem("historial")||"[]")
+.reduce((a,b)=>a+(b.gastos||0),0);
+
+ws.addRow(["TOTAL INGRESOS","","","","","","","",totalIng]);
+ws.addRow(["TOTAL GASTOS","","","","","","","",totalGas]);
+ws.addRow(["UTILIDAD FINAL","","","","","","","",totalIng-totalGas]);
+
+/* ================= PAPELERÍA ================= */
+ws.addRow([]);
+ws.addRow(["CONTROL DE PAPELERÍA"]);
+
+ws.addRow(["TIPO","INICIAL","USADOS","QUEDAN"]);
+
+ws.addRow([
+"LIVIANOS",pl1.value,pl2.value,ql.innerText
+]);
+ws.addRow([
+"PESADOS",pp1.value,pp2.value,qp.innerText
+]);
+ws.addRow([
+"EMISIONES",pe1.value,pe2.value,qe.innerText
+]);
+ws.addRow([
+"EMPLASTICADOS",px1.value,px2.value,qx.innerText
+]);
+
+/* ================= BORDES A TODO ================= */
+ws.eachRow(row=>{
+row.eachCell(cell=>{
+cell.border = {
+top:{style:"thin"},
+left:{style:"thin"},
+bottom:{style:"thin"},
+right:{style:"thin"}
+};
+cell.alignment = { horizontal:"center", vertical:"middle" };
+});
+});
+
+/* ================= DESCARGA ================= */
+const buffer = await wb.xlsx.writeBuffer();
+
+const blob = new Blob([buffer], {type:
+"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+});
+
+const a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = `REPORTE_CONTABLE_${fecha.value}.xlsx`;
+a.click();
+
+alerta("Excel profesional generado ✔", "ok");
+}
+</script>
+</body>
+</html>
 
 </script>
 </body>
