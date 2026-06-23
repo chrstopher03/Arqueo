@@ -537,13 +537,19 @@ alerta("Reporte descargado correctamente", "ok");
 
 }
 
-
 async function exportarExcel(){
 
 alerta("Generando Excel profesional estilo empresa...", "info");
 
 const wb = new ExcelJS.Workbook();
 const ws = wb.addWorksheet("REPORTE CONTABLE");
+
+/* ================= FILTRO POR FECHA ================= */
+const historial = JSON.parse(localStorage.getItem("historial") || "[]");
+const fechaSeleccionada = fecha.value;
+
+// SOLO registros del día
+const datosDelDia = historial.filter(x => x.fecha === fechaSeleccionada);
 
 /* ================= ANCHO COLUMNAS ================= */
 ws.columns = [
@@ -581,7 +587,7 @@ fgColor: { argb: "2E86C1" }
 
 /* FECHA */
 ws.mergeCells("A3:I3");
-ws.getCell("A3").value = "Fecha: " + fecha.value;
+ws.getCell("A3").value = "Fecha: " + fechaSeleccionada;
 ws.getCell("A3").alignment = { horizontal: "center" };
 
 /* ================= TABLA VENTAS ================= */
@@ -602,7 +608,8 @@ bottom:{style:"thin"}, right:{style:"thin"}
 };
 });
 
-JSON.parse(localStorage.getItem("historial")||"[]").forEach(x=>{
+/* ================= DATOS FILTRADOS ================= */
+datosDelDia.forEach(x=>{
 ws.addRow([
 x.fecha,
 x.hora,
@@ -611,7 +618,7 @@ x.p,
 x.e,
 x.em,
 x.total,
-x.gastos||0,
+x.gastos || 0,
 x.final
 ]);
 });
@@ -620,15 +627,12 @@ x.final
 ws.addRow([]);
 ws.addRow(["RESUMEN FINANCIERO"]);
 
-let totalIng = JSON.parse(localStorage.getItem("historial")||"[]")
-.reduce((a,b)=>a+(b.total||0),0);
-
-let totalGas = JSON.parse(localStorage.getItem("historial")||"[]")
-.reduce((a,b)=>a+(b.gastos||0),0);
+let totalIng = datosDelDia.reduce((a,b)=>a + (b.total||0), 0);
+let totalGas = datosDelDia.reduce((a,b)=>a + (b.gastos||0), 0);
 
 ws.addRow(["TOTAL INGRESOS","","","","","","","",totalIng]);
 ws.addRow(["TOTAL GASTOS","","","","","","","",totalGas]);
-ws.addRow(["UTILIDAD FINAL","","","","","","","",totalIng-totalGas]);
+ws.addRow(["UTILIDAD FINAL","","","","","","","",totalIng - totalGas]);
 
 /* ================= PAPELERÍA ================= */
 ws.addRow([]);
@@ -637,16 +641,16 @@ ws.addRow(["CONTROL DE PAPELERÍA"]);
 ws.addRow(["TIPO","INICIAL","USADOS","QUEDAN"]);
 
 ws.addRow([
-"LIVIANOS",pl1.value,pl2.value,ql.innerText
+"LIVIANOS", pl1.value, pl2.value, ql.innerText
 ]);
 ws.addRow([
-"PESADOS",pp1.value,pp2.value,qp.innerText
+"PESADOS", pp1.value, pp2.value, qp.innerText
 ]);
 ws.addRow([
-"EMISIONES",pe1.value,pe2.value,qe.innerText
+"EMISIONES", pe1.value, pe2.value, qe.innerText
 ]);
 ws.addRow([
-"EMPLASTICADOS",px1.value,px2.value,qx.innerText
+"EMPLASTICADOS", px1.value, px2.value, qx.innerText
 ]);
 
 /* ================= BORDES A TODO ================= */
@@ -665,16 +669,16 @@ cell.alignment = { horizontal:"center", vertical:"middle" };
 /* ================= DESCARGA ================= */
 const buffer = await wb.xlsx.writeBuffer();
 
-const blob = new Blob([buffer], {type:
-"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+const blob = new Blob([buffer], {
+type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 });
 
 const a = document.createElement("a");
 a.href = URL.createObjectURL(blob);
-a.download = `REPORTE_CONTABLE_${fecha.value}.xlsx`;
+a.download = `REPORTE_CONTABLE_${fechaSeleccionada}.xlsx`;
 a.click();
 
-alerta("Excel profesional generado ✔", "ok");
+alerta("Excel del día generado ✔", "ok");
 }
 </script>
 </body>
