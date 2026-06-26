@@ -458,82 +458,127 @@ cargarHistorial();
 alerta("Registro guardado correctamente", "ok");
 }
 
-
 /* ================= HISTORIAL ================= */
 function cargarHistorial(){
-render(JSON.parse(localStorage.getItem("historial")||"[]"));
+    render(JSON.parse(localStorage.getItem("historial") || "[]"));
 }
 
 function filtrar(){
-let f=document.getElementById("filtro").value;
-let h=JSON.parse(localStorage.getItem("historial")||"[]");
-render(h.filter(x=>x.fecha===f));
+    let f = document.getElementById("filtro").value;
+    let h = JSON.parse(localStorage.getItem("historial") || "[]");
+    render(h.filter(x => x.fecha === f));
 }
 
 function render(data){
 
-let t=document.getElementById("historial");
+    let historial = JSON.parse(localStorage.getItem("historial") || "[]");
 
-t.innerHTML=`
-<tr>
-<th>FECHA</th>
-<th>HORA</th>
-<th>LIV</th>
-<th>PES</th>
-<th>EMI</th>
-<th>EMPL</th>
-<th>TOTAL</th>
-</tr>`;
+    let t = document.getElementById("historial");
 
-data.forEach(x=>{
-t.innerHTML+=`
-<tr>
-<td>${x.fecha}</td>
-<td>${x.hora}</td>
-<td>${x.l}</td>
-<td>${x.p}</td>
-<td>${x.e}</td>
-<td>${x.em}</td>
-<td>${x.final ?? x.total}</td>
-</tr>`;
-});
+    t.innerHTML = `
+    <tr>
+        <th>#</th>
+        <th>FECHA</th>
+        <th>HORA</th>
+        <th>LIV</th>
+        <th>PES</th>
+        <th>EMI</th>
+        <th>EMPL</th>
+        <th>TOTAL</th>
+        <th>ACCIONES</th>
+    </tr>`;
+
+    data.forEach((x,i)=>{
+
+        let indice = historial.findIndex(h =>
+            h.fecha == x.fecha &&
+            h.hora == x.hora &&
+            h.l == x.l &&
+            h.p == x.p &&
+            h.e == x.e &&
+            h.em == x.em
+        );
+
+        t.innerHTML += `
+        <tr>
+            <td>${i+1}</td>
+            <td>${x.fecha}</td>
+            <td>${x.hora}</td>
+            <td>${x.l}</td>
+            <td>${x.p}</td>
+            <td>${x.e}</td>
+            <td>${x.em}</td>
+            <td>C$ ${x.final ?? x.total}</td>
+            <td>
+                <button class="deleteBtn" onclick="eliminarVenta(${indice})">
+                    🗑 Eliminar
+                </button>
+            </td>
+        </tr>`;
+    });
+
 }
 
 
-/* ================= BORRAR ================= */
+/* ================= ELIMINAR UNA VENTA ================= */
+function eliminarVenta(indice){
+
+    if(indice < 0) return;
+
+    if(!confirm("¿Desea eliminar esta venta?")) return;
+
+    let historial = JSON.parse(localStorage.getItem("historial") || "[]");
+
+    historial.splice(indice,1);
+
+    localStorage.setItem("historial",JSON.stringify(historial));
+
+    cargarHistorial();
+
+    alerta("Venta eliminada correctamente","ok");
+}
+
+
+/* ================= BORRAR TODO EL HISTORIAL ================= */
 function clearHistory(){
-localStorage.removeItem("historial");
-cargarHistorial();
-alerta("Historial eliminado", "error");
+
+    if(!confirm("¿Desea borrar todo el historial?")) return;
+
+    localStorage.removeItem("historial");
+
+    cargarHistorial();
+
+    alerta("Historial eliminado","error");
+
 }
 
 
 /* ================= DESCARGAR ================= */
 function descargar(){
 
-alerta("Generando reporte...", "info");
+    alerta("Generando reporte...","info");
 
-const botones=document.querySelectorAll("button");
+    const botones=document.querySelectorAll("button");
 
-botones.forEach(b=>b.style.display="none");
+    botones.forEach(b=>b.style.display="none");
 
-html2canvas(document.getElementById("sistema"),{
-scale:3,
-useCORS:true,
-backgroundColor:"#ffffff"
-}).then(canvas=>{
+    html2canvas(document.getElementById("sistema"),{
+        scale:3,
+        useCORS:true,
+        backgroundColor:"#ffffff"
+    }).then(canvas=>{
 
-botones.forEach(b=>b.style.display="");
+        botones.forEach(b=>b.style.display="");
 
-const a=document.createElement("a");
+        const a=document.createElement("a");
 
-a.download=`ARQUEO_${document.getElementById("fecha").value}.png`;
-a.href=canvas.toDataURL("image/png",1.0);
-a.click();
+        a.download=`ARQUEO_${document.getElementById("fecha").value}.png`;
+        a.href=canvas.toDataURL("image/png",1.0);
+        a.click();
 
-alerta("Reporte descargado correctamente", "ok");
+        alerta("Reporte descargado correctamente","ok");
 
-});
+    });
 
 }
 
@@ -683,7 +728,5 @@ alerta("Excel del día generado ✔", "ok");
 </script>
 </body>
 </html>
-
-</script>
 </body>
 </html>
